@@ -263,9 +263,12 @@
     </div>
 
     <script type="module">
-        import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
 
-        const MODEL_ID = 'onnx-community/small-e-czech-finetuned-ner-wikiann-ONNX';
+        // Self-hosted model — no HuggingFace dependency
+        env.remoteHost = new URL('./', import.meta.url).href;
+        env.allowLocalModels = false;
+        const MODEL_ID = 'model';
 
         const ENTITY_MAP = { 'PER': 'OSOBA', 'LOC': 'LOKALITA', 'ORG': 'ORGANIZACE', 'MISC': 'OSTATNI' };
         const ALL_LABELS = ['OSOBA', 'LOKALITA', 'ORGANIZACE', 'OSTATNI', 'RODNE_CISLO', 'TELEFON', 'EMAIL', 'CASTKA', 'IGNOROVAT'];
@@ -402,7 +405,7 @@
 
             try {
                 ner = await pipeline('token-classification', MODEL_ID, {
-                    dtype: 'fp32',
+                    dtype: 'fp16',
                     progress_callback: onProgress,
                 });
                 progressFill.style.width = '100%';
