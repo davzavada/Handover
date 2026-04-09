@@ -135,9 +135,6 @@ label { display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9r
             margin-left: auto; font-weight: 400; font-size: 0.8rem;
             color: #64748b; cursor: pointer; user-select: none; margin-bottom: 0;
         }
-        .model-row { margin-top: 0.8rem; }
-        .model-row label { font-size: 0.8rem; color: #64748b; font-weight: 400; margin-bottom: 0.3rem; }
-        .model-row select { width: 100%; }
     </style>
 </head>
 <body>
@@ -156,14 +153,6 @@ label { display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9r
             <!-- Input phase -->
             <div id="inputPhase">
                 <textarea id="input" placeholder="Zadejte cesky text k anonymizaci..."></textarea>
-                <div class="model-row">
-                    <label>NER model</label>
-                    <select id="modelSelect">
-                        <option value="onnx-community/small-e-czech-finetuned-ner-wikiann-ONNX" selected>Small-E-Czech NER (cesky, ~50 MB)</option>
-                        <option value="Xenova/distilbert-base-multilingual-cased-ner-hrl">DistilBERT Multilingual NER (10 jazyku, ~250 MB)</option>
-                        <option value="Xenova/bert-base-NER">BERT-base NER (anglicky, ~400 MB)</option>
-                    </select>
-                </div>
                 <div class="controls-row">
                     <button class="btn-primary" id="analyzeBtn" disabled>Analyzovat</button>
                     <button class="btn-secondary" id="clearBtn">Smazat</button>
@@ -212,8 +201,7 @@ label { display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9r
     <script type="module">
         import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
 
-        let currentModelId = 'onnx-community/small-e-czech-finetuned-ner-wikiann-ONNX';
-        const modelCache = {};
+        const MODEL_ID = 'onnx-community/small-e-czech-finetuned-ner-wikiann-ONNX';
 
         const ENTITY_MAP = { 'PER': 'OSOBA', 'LOC': 'LOKALITA', 'ORG': 'ORGANIZACE', 'MISC': 'OSTATNI' };
         const ALL_LABELS = ['OSOBA', 'LOKALITA', 'ORGANIZACE', 'OSTATNI', 'RODNE_CISLO', 'TELEFON', 'EMAIL', 'CASTKA', 'IGNOROVAT'];
@@ -322,54 +310,34 @@ label { display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9r
         function setStatus(text, cls) { statusEl.textContent = text; statusEl.className = cls; }
 
         async function loadModel() {
-            const modelId = currentModelId;
-            const modelName = document.querySelector('#modelSelect option:checked')?.textContent || modelId;
             analyzeBtn.disabled = true;
-            document.getElementById('modelSelect').disabled = true;
-
-            if (modelCache[modelId]) {
-                ner = modelCache[modelId];
-                setStatus('Model "' + modelName + '" nacten z cache.', 'ready');
-                analyzeBtn.disabled = false;
-                document.getElementById('modelSelect').disabled = false;
-                return;
-            }
-
-            setStatus('Stahuji model "' + modelName + '"...', 'loading');
+            setStatus('Nacitam model...', 'loading');
             progressBar.classList.add('active');
             progressFill.style.width = '0%';
 
             const fileProgress = {};
             function onProgress(ev) {
                 if (ev.status === 'download' || ev.status === 'progress') {
-                    if (ev.file) {
-                        fileProgress[ev.file] = { loaded: ev.loaded || 0, total: ev.total || 0 };
-                    }
+                    if (ev.file) fileProgress[ev.file] = { loaded: ev.loaded || 0, total: ev.total || 0 };
                     let totalBytes = 0, loadedBytes = 0;
-                    for (const f of Object.values(fileProgress)) {
-                        totalBytes += f.total;
-                        loadedBytes += f.loaded;
-                    }
+                    for (const f of Object.values(fileProgress)) { totalBytes += f.total; loadedBytes += f.loaded; }
                     const pct = totalBytes > 0 ? Math.round((loadedBytes / totalBytes) * 100) : 0;
                     progressFill.style.width = pct + '%';
                     const loadedMB = (loadedBytes / 1048576).toFixed(1);
                     const totalMB = totalBytes > 0 ? (totalBytes / 1048576).toFixed(0) : '?';
-                    setStatus('Stahuji model "' + modelName + '"... ' + loadedMB + ' / ' + totalMB + ' MB (' + pct + '%)', 'loading');
-                } else if (ev.status === 'initiate') {
-                    setStatus('Pripravuji soubor: ' + (ev.file || '') + '...', 'loading');
-                } else if (ev.status === 'ready') {
-                    setStatus('Model "' + modelName + '" nacten a pripraven.', 'ready');
+                    if (totalBytes > 0) {
+                        setStatus('Stahuji model... ' + loadedMB + ' / ' + totalMB + ' MB (' + pct + '%)', 'loading');
+                    }
                 }
             }
 
             try {
-                ner = await pipeline('token-classification', modelId, {
+                ner = await pipeline('token-classification', MODEL_ID, {
                     dtype: 'fp32',
                     progress_callback: onProgress,
                 });
-                modelCache[modelId] = ner;
                 progressFill.style.width = '100%';
-                setStatus('Model "' + modelName + '" nacten a pripraven.', 'ready');
+                setStatus('Model pripraven.', 'ready');
                 analyzeBtn.disabled = false;
                 setTimeout(() => progressBar.classList.remove('active'), 1000);
             } catch (err) {
@@ -377,13 +345,7 @@ label { display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9r
                 setStatus('Chyba pri nacitani modelu: ' + err.message, 'error');
                 progressBar.classList.remove('active');
             }
-            document.getElementById('modelSelect').disabled = false;
         }
-
-        document.getElementById('modelSelect').addEventListener('change', (e) => {
-            currentModelId = e.target.value;
-            loadModel();
-        });
 
         // --- NER result aggregation ---
         function aggregateTokens(tokens, originalText) {
