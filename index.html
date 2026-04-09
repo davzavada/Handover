@@ -76,6 +76,13 @@
             border: 1.5px solid #93c5fd; padding: 0.5rem 1rem;
         }
         .btn-back:hover { background: #eff6ff; border-color: #2563b3; }
+        .spinner {
+            display: inline-block; width: 12px; height: 12px;
+            border: 2px solid #cbd5e1; border-top-color: #2563b3;
+            border-radius: 50%; animation: spin 0.6s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
         .model-info {
             display: inline-flex; align-items: center; gap: 0.35rem;
             font-size: 0.75rem; color: #94a3b8; margin-top: 0.8rem;
@@ -242,6 +249,7 @@
                 <button class="model-info-btn" tabindex="-1">?
                     <span class="model-tooltip">Small-E-Czech NER · čeština · ~26 MB · uloženo v prohlížeči</span>
                 </button>
+                <span class="spinner" id="modelSpinner"></span>
                 <span id="modelStatus">Načítám model...</span>
             </div>
             <div class="progress-bar" id="progressBar">
@@ -416,12 +424,14 @@
                 }, 800);
                 modelStatus.textContent = 'Small-E-Czech NER je načten.';
                 modelStatus.className = 'model-ready';
+                document.getElementById('modelSpinner').style.display = 'none';
             } catch (err) {
                 console.error('Model load error:', err);
                 setError('Chyba při načítání modelu: ' + err.message);
                 progressBar.classList.remove('active');
                 progressLabel.classList.remove('active');
                 modelStatus.textContent = '';
+                document.getElementById('modelSpinner').style.display = 'none';
             }
         }
 
