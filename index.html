@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anonymizace textu</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #eef2f7; color: #1e293b;
+            min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+            padding: 2rem 1rem;
+        }
+        .container { max-width: 820px; width: 100%; }
+        h1 { font-size: 1.8rem; margin-bottom: 0.3rem; color: #1e3a5f; }
+        .subtitle { color: #64748b; margin-bottom: 1.5rem; font-size: 0.95rem; }
+        .privacy-badge {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            background: #e8f5e9; color: #2e7d32;
+            padding: 0.3rem 0.8rem; border-radius: 1rem;
+            font-size: 0.8rem; font-weight: 600; margin-bottom: 1.5rem;
+        }
+        .card {
+            background: white; border-radius: 14px; padding: 1.8rem;
+            box-shadow: 0 2px 12px rgba(30,58,95,0.08); margin-bottom: 1.5rem;
+            border: 1px solid #e2e8f0;
+        }
+label { display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem; color: #1e3a5f; }
+        textarea {
+            width: 100%; min-height: 140px; padding: 0.8rem;
+            border: 2px solid #cbd5e1; border-radius: 8px;
+            font-size: 0.95rem; font-family: inherit; resize: vertical;
+            color: #1e293b; background: #f8fafc;
+        }
+        textarea:focus { outline: none; border-color: #2563b3; background: white; }
+        select {
+            padding: 0.5rem; border: 2px solid #cbd5e1; border-radius: 8px;
+            font-size: 0.85rem; font-family: inherit; cursor: pointer;
+            color: #1e293b; background: #f8fafc;
+        }
+        select:focus { outline: none; border-color: #2563b3; }
+        .btn-row { display: flex; gap: 0.8rem; margin-top: 1rem; flex-wrap: wrap; align-items: center; }
+        button {
+            padding: 0.6rem 1.4rem; border: none; border-radius: 8px;
+            font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+        }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: #2563b3; color: white; }
+        .btn-primary:hover:not(:disabled) { background: #1d4f94; }
+        .btn-blue { background: #1a73b5; color: white; }
+        .btn-blue:hover:not(:disabled) { background: #155d94; }
+        .btn-secondary { background: #e2e8f0; color: #475569; }
+        .btn-secondary:hover:not(:disabled) { background: #cbd5e1; }
+        .btn-back { background: none; color: #2563b3; border: 2px solid #2563b3; padding: 0.5rem 1rem; }
+        .btn-back:hover { background: #eff6ff; }
+        #status {
+            margin-top: 1rem; padding: 0.6rem 1rem; border-radius: 8px;
+            font-size: 0.85rem; display: none;
+        }
+        #status.loading { display: block; background: #e0edff; color: #1a5fa0; }
+        #status.ready { display: block; background: #e8f5e9; color: #2e7d32; }
+        #status.error { display: block; background: #fce4ec; color: #c62828; }
+        .progress-bar {
+            width: 100%; height: 8px; background: #e2e8f0;
+            border-radius: 4px; margin-top: 0.5rem; overflow: hidden; display: none;
+        }
+        .progress-bar.active { display: block; }
+        .progress-bar-fill {
+            height: 100%; background: linear-gradient(90deg, #2563b3, #1a73b5); border-radius: 4px;
+            transition: width 0.15s ease-out; width: 0%;
+        }
+        .review-area {
+            font-size: 0.95rem; line-height: 2.2; padding: 1rem;
+            background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; min-height: 80px;
+        }
+        .entity-chip {
+            display: inline-flex; align-items: center; gap: 0.2rem;
+            border-radius: 4px; font-weight: 600; font-size: 0.85rem;
+            padding: 0.15rem 0.2rem 0.15rem 0.5rem;
+            cursor: default; vertical-align: baseline; white-space: nowrap;
+        }
+        .entity-chip select {
+            border: none; background: transparent; font-size: 0.7rem; font-weight: 700;
+            cursor: pointer; padding: 0.1rem; color: inherit;
+            -webkit-appearance: none; appearance: none;
+            border-left: 1px solid rgba(0,0,0,0.15);
+            margin-left: 0.3rem; padding-left: 0.3rem;
+        }
+        .entity-chip select option { color: #333; background: white; }
+        .entity-chip .remove-btn {
+            background: none; border: none; padding: 0.1rem 0.3rem;
+            font-size: 0.8rem; cursor: pointer; opacity: 0.5;
+            color: inherit; line-height: 1; border-radius: 3px;
+        }
+        .entity-chip .remove-btn:hover { opacity: 1; background: rgba(0,0,0,0.1); }
+        .entity-OSOBA { background: #ffcdd2; color: #b71c1c; }
+        .entity-LOKALITA { background: #b2dfdb; color: #004d40; }
+        .entity-ORGANIZACE { background: #bbdefb; color: #0d47a1; }
+        .entity-OSTATNI { background: #c8e6c9; color: #1b5e20; }
+        .entity-RODNE_CISLO { background: #fff9c4; color: #f57f17; }
+        .entity-TELEFON { background: #e1bee7; color: #4a148c; }
+        .entity-EMAIL { background: #ffe0b2; color: #e65100; }
+        .entity-CASTKA { background: #c5e1a5; color: #33691e; }
+        .entity-IGNOROVAT { background: #eeeeee; color: #999; text-decoration: line-through; }
+        .review-hint { font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+        .legend { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.8rem; }
+        .legend-item { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600; }
+        .output-area {
+            white-space: pre-wrap; word-break: break-word;
+            font-size: 0.95rem; line-height: 1.8; min-height: 60px;
+            padding: 1rem; background: #f8fafc; border-radius: 8px;
+            border: 1px solid #e2e8f0; border-left: 4px solid #2563b3;
+        }
+        .copied-toast {
+            display: inline-flex; align-items: center; gap: 0.3rem;
+            font-size: 0.8rem; color: #1a5fa0; font-weight: 600;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .copied-toast.show { opacity: 1; }
+        .examples { margin-top: 0.8rem; }
+        .examples summary { cursor: pointer; font-size: 0.85rem; color: #64748b; user-select: none; }
+        .example-btn {
+            display: block; width: 100%; text-align: left;
+            padding: 0.5rem 0.8rem; margin-top: 0.4rem;
+            background: #f8fafc; border: 1px solid #e2e8f0;
+            border-radius: 6px; font-size: 0.85rem; color: #475569; cursor: pointer;
+        }
+        .example-btn:hover { background: #eff6ff; border-color: #93c5fd; }
+        .controls-row {
+            display: flex; gap: 0.6rem; margin-top: 0.8rem; flex-wrap: wrap; align-items: center;
+        }
+        .controls-row label {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            margin-left: auto; font-weight: 400; font-size: 0.8rem;
+            color: #64748b; cursor: pointer; user-select: none; margin-bottom: 0;
+        }
+        .model-row { margin-top: 0.8rem; }
+        .model-row label { font-size: 0.8rem; color: #64748b; font-weight: 400; margin-bottom: 0.3rem; }
+        .model-row select { width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Anonymizace textu</h1>
+        <p class="subtitle">Rozpoznavani osobnich udaju v ceskem textu. Detekuje jmena, mista, organizace, telefony, e-maily a rodna cisla.</p>
+        <div class="privacy-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            100% v prohlizeci &mdash; vase data neopousteji toto zarizeni
+        </div>
+
+        <!-- BOX 1: Input + Review in same card -->
+        <div class="card" id="mainCard">
+            <label id="mainLabel">Vstupni text</label>
+
+            <!-- Input phase -->
+            <div id="inputPhase">
+                <textarea id="input" placeholder="Zadejte cesky text k anonymizaci..."></textarea>
+                <div class="model-row">
+                    <label>NER model</label>
+                    <select id="modelSelect">
+                        <option value="onnx-community/small-e-czech-finetuned-ner-wikiann-ONNX" selected>Small-E-Czech NER (cesky, ~50 MB)</option>
+                        <option value="Xenova/distilbert-base-multilingual-cased-ner-hrl">DistilBERT Multilingual NER (10 jazyku, ~250 MB)</option>
+                        <option value="Xenova/bert-base-NER">BERT-base NER (anglicky, ~400 MB)</option>
+                    </select>
+                </div>
+                <div class="controls-row">
+                    <button class="btn-primary" id="analyzeBtn" disabled>Analyzovat</button>
+                    <button class="btn-secondary" id="clearBtn">Smazat</button>
+                    <label>
+                        <input type="checkbox" id="regexToggle" checked style="cursor:pointer;"> Regex vzory
+                    </label>
+                </div>
+                <details class="examples">
+                    <summary>Ukazkove vety</summary>
+                    <div id="exampleList"></div>
+                </details>
+            </div>
+
+            <!-- Review phase (replaces input in same card) -->
+            <div id="reviewPhase" style="display:none;">
+                <div class="legend" id="legend"></div>
+                <div class="review-area" id="reviewArea"></div>
+                <p class="review-hint">Zmente kategorii v rozbalovacim menu. Kliknutim na &times; entitu odeberete.</p>
+                <div class="btn-row">
+                    <button class="btn-blue" id="anonBtn">Anonymizovat a kopirovat</button>
+                    <select id="replaceMode">
+                        <option value="labels" selected>Nahradit stitky [OSOBA]</option>
+                        <option value="fake">Nahradit nahodnymi jmeny</option>
+                    </select>
+                    <button class="btn-back" id="backBtn">Zpet k uprave</button>
+                </div>
+            </div>
+
+            <div id="status"></div>
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-bar-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <!-- BOX 2: Anonymized output -->
+        <div class="card" id="outputCard" style="display:none;">
+            <label>Anonymizovany vystup</label>
+            <div class="output-area" id="outputArea"></div>
+            <div class="btn-row">
+                <button class="btn-secondary" id="copyBtn">Kopirovat znovu</button>
+                <span class="copied-toast" id="copiedToast">Skopirovano do schranky</span>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
+
+        let currentModelId = 'onnx-community/small-e-czech-finetuned-ner-wikiann-ONNX';
+        const modelCache = {};
+
+        const ENTITY_MAP = { 'PER': 'OSOBA', 'LOC': 'LOKALITA', 'ORG': 'ORGANIZACE', 'MISC': 'OSTATNI' };
+        const ALL_LABELS = ['OSOBA', 'LOKALITA', 'ORGANIZACE', 'OSTATNI', 'RODNE_CISLO', 'TELEFON', 'EMAIL', 'CASTKA', 'IGNOROVAT'];
+        const LABEL_PRIORITY = ['RODNE_CISLO', 'TELEFON', 'EMAIL', 'CASTKA', 'OSOBA', 'ORGANIZACE', 'LOKALITA', 'OSTATNI'];
+
+        const REGEX_PATTERNS = [
+            { label: 'RODNE_CISLO', regex: /\b\d{6}\/\d{3,4}\b/g },
+            { label: 'TELEFON', regex: /(?<!\d)(?:\+420[\s-]?)?(?:\d{3}[\s-]?){2}\d{3}(?!\d)/g },
+            { label: 'EMAIL', regex: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g },
+            { label: 'LOKALITA', regex: /(?:(?:v|na|do|z|ze|od|u|při|po|před|za|nad|pod|mezi|k|ke)\s+)?(?:[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+(?:ov[ěéa]|sk[ée]m?|ck[ée]m?|[ní])?)\s+(?:ulice?|ulici|ulic[ií]|třídě?|třídy|náměstí|nábřeží|sady|sadech|sad[ůy]|bulváru?|alej[ei]?|silnici|silnice|nám\.)(?:\s+\d+(?:\/\d+)?[a-zA-Z]?)?\b/gi },
+            { label: 'LOKALITA', regex: /(?:ulice?|třída|náměstí|nábřeží)\s+[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+(?:\s+\d+(?:\/\d+)?[a-zA-Z]?)?\b/gi },
+            { label: 'LOKALITA', regex: /\b\d{3}\s?\d{2}\b/g },
+            { label: 'CASTKA', regex: /\b\d[\d\s.,]*\s*(?:tisíc|tis\.|milion[ůy]?|milionu|mld|miliard[yů]?|miliardy)\s*(?:Kč|CZK|EUR|USD|korun|euro|dolarů)?\b/gi },
+            { label: 'CASTKA', regex: /\b\d[\d\s.,]*\s*(?:Kč|CZK|EUR|USD|korun|euro|dolarů)\b/gi },
+        ];
+
+        const EXAMPLES = [
+            'Jan Novak bydli v Praze a pracuje v Brne.',
+            'Petr Svoboda je zamestnancem firmy Skoda Auto.',
+            'Zavolejte mi na +420 777 123 456 nebo napiste.',
+            'Kontaktujte nas na info@firma.cz pro vice informaci.',
+            'Jeho rodne cislo je 900215/1234.',
+            'Marie Dvorakova (narozena 855612/3456) z Ostravy, email: marie.d@seznam.cz, tel: 602 345 678, pracuje v Ceske sporitelne.',
+        ];
+
+        // --- Fake data pools ---
+        const FAKE_POOLS = {
+            OSOBA: [
+                'Karel Marek', 'Lucie Pokorna', 'Tomas Jelinek', 'Eva Kralova', 'Martin Ruzicka',
+                'Jana Sedlackova', 'Petr Vlcek', 'Hana Kopecka', 'Jakub Bartos', 'Vera Nemcova',
+                'Ondrej Fiala', 'Katerina Machova', 'David Prochazka', 'Zuzana Horakova', 'Filip Kolar',
+            ],
+            LOKALITA: [
+                'Plzen', 'Olomouc', 'Liberec', 'Hradec Kralove', 'Ceske Budejovice',
+                'Pardubice', 'Zlin', 'Kladno', 'Karvina', 'Opava', 'Jihlava', 'Tabor',
+            ],
+            ORGANIZACE: [
+                'Nova Data s.r.o.', 'Centrum Services a.s.', 'TechPro Group s.r.o.',
+                'Meridian Solutions a.s.', 'Alfa Consulting s.r.o.', 'BestWay Industries a.s.',
+                'Orion Software s.r.o.', 'Zeleny Svet a.s.',
+            ],
+            OSTATNI: ['[OSTATNI-1]', '[OSTATNI-2]', '[OSTATNI-3]', '[OSTATNI-4]'],
+        };
+
+        function randomPhone() {
+            const pre = ['601','602','603','604','605','606','607','608','702','720','723','730','731','770','776'];
+            const p = pre[Math.floor(Math.random() * pre.length)];
+            const n = () => String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+            return '+420 ' + p + ' ' + n() + ' ' + n();
+        }
+        function randomRC() {
+            const y = String(50 + Math.floor(Math.random() * 50)).padStart(2, '0');
+            const m = String(1 + Math.floor(Math.random() * 12)).padStart(2, '0');
+            const d = String(1 + Math.floor(Math.random() * 28)).padStart(2, '0');
+            const s = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+            return y + m + d + '/' + s;
+        }
+        function randomEmail(idx) {
+            const names = ['jan.k','lucie.p','tomas.j','eva.k','martin.r','jana.s','petr.v','hana.k','jakub.b','vera.n'];
+            const domains = ['email.cz','seznam.cz','post.cz','centrum.cz','volny.cz'];
+            return names[idx % names.length] + '@' + domains[idx % domains.length];
+        }
+        function randomAmount() {
+            const amounts = ['500 Kc','1 200 Kc','25 000 Kc','3 500 Kc','750 Kc','18 000 Kc','42 000 Kc','100 Kc','9 900 Kc','2 miliony Kc'];
+            return amounts[Math.floor(Math.random() * amounts.length)];
+        }
+
+        function assignFakeValues(entities) {
+            const counters = {};
+            for (const ent of entities) {
+                if (ent.label === 'IGNOROVAT') continue;
+                const lbl = ent.label;
+                if (!counters[lbl]) counters[lbl] = 0;
+                const idx = counters[lbl]++;
+                if (lbl === 'TELEFON') { ent.fake = randomPhone(); }
+                else if (lbl === 'RODNE_CISLO') { ent.fake = randomRC(); }
+                else if (lbl === 'EMAIL') { ent.fake = randomEmail(idx); }
+                else if (lbl === 'CASTKA') { ent.fake = randomAmount(); }
+                else if (FAKE_POOLS[lbl]) { ent.fake = FAKE_POOLS[lbl][idx % FAKE_POOLS[lbl].length]; }
+                else { ent.fake = '[' + lbl + ']'; }
+            }
+        }
+
+        let ner = null;
+        let currentText = '';
+        let currentEntities = [];
+
+        const statusEl = document.getElementById('status');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const inputPhase = document.getElementById('inputPhase');
+        const reviewPhase = document.getElementById('reviewPhase');
+
+        // --- Setup examples ---
+        const exList = document.getElementById('exampleList');
+        EXAMPLES.forEach((ex) => {
+            const btn = document.createElement('button');
+            btn.className = 'example-btn';
+            btn.textContent = ex;
+            btn.addEventListener('click', () => { document.getElementById('input').value = ex; });
+            exList.appendChild(btn);
+        });
+
+        // --- Model loading ---
+        function setStatus(text, cls) { statusEl.textContent = text; statusEl.className = cls; }
+
+        async function loadModel() {
+            const modelId = currentModelId;
+            const modelName = document.querySelector('#modelSelect option:checked')?.textContent || modelId;
+            analyzeBtn.disabled = true;
+            document.getElementById('modelSelect').disabled = true;
+
+            if (modelCache[modelId]) {
+                ner = modelCache[modelId];
+                setStatus('Model "' + modelName + '" nacten z cache.', 'ready');
+                analyzeBtn.disabled = false;
+                document.getElementById('modelSelect').disabled = false;
+                return;
+            }
+
+            setStatus('Stahuji model "' + modelName + '"...', 'loading');
+            progressBar.classList.add('active');
+            progressFill.style.width = '0%';
+
+            const fileProgress = {};
+            function onProgress(ev) {
+                if (ev.status === 'download' || ev.status === 'progress') {
+                    if (ev.file) {
+                        fileProgress[ev.file] = { loaded: ev.loaded || 0, total: ev.total || 0 };
+                    }
+                    let totalBytes = 0, loadedBytes = 0;
+                    for (const f of Object.values(fileProgress)) {
+                        totalBytes += f.total;
+                        loadedBytes += f.loaded;
+                    }
+                    const pct = totalBytes > 0 ? Math.round((loadedBytes / totalBytes) * 100) : 0;
+                    progressFill.style.width = pct + '%';
+                    const loadedMB = (loadedBytes / 1048576).toFixed(1);
+                    const totalMB = totalBytes > 0 ? (totalBytes / 1048576).toFixed(0) : '?';
+                    setStatus('Stahuji model "' + modelName + '"... ' + loadedMB + ' / ' + totalMB + ' MB (' + pct + '%)', 'loading');
+                } else if (ev.status === 'initiate') {
+                    setStatus('Pripravuji soubor: ' + (ev.file || '') + '...', 'loading');
+                } else if (ev.status === 'ready') {
+                    setStatus('Model "' + modelName + '" nacten a pripraven.', 'ready');
+                }
+            }
+
+            try {
+                ner = await pipeline('token-classification', modelId, {
+                    dtype: 'fp32',
+                    progress_callback: onProgress,
+                });
+                modelCache[modelId] = ner;
+                progressFill.style.width = '100%';
+                setStatus('Model "' + modelName + '" nacten a pripraven.', 'ready');
+                analyzeBtn.disabled = false;
+                setTimeout(() => progressBar.classList.remove('active'), 1000);
+            } catch (err) {
+                console.error('Model load error:', err);
+                setStatus('Chyba pri nacitani modelu: ' + err.message, 'error');
+                progressBar.classList.remove('active');
+            }
+            document.getElementById('modelSelect').disabled = false;
+        }
+
+        document.getElementById('modelSelect').addEventListener('change', (e) => {
+            currentModelId = e.target.value;
+            loadModel();
+        });
+
+        // --- NER result aggregation ---
+        function aggregateTokens(tokens, originalText) {
+            const groups = [];
+            let current = null;
+
+            for (const tok of tokens) {
+                const raw = tok.entity || tok.entity_group || '';
+                if (!raw || raw === 'O' || raw === 'LABEL_0') {
+                    if (current) { groups.push(current); current = null; }
+                    continue;
+                }
+
+                let prefix = 'B', tag = raw;
+                if (raw.length > 2 && raw[1] === '-') {
+                    prefix = raw[0];
+                    tag = raw.substring(2);
+                }
+
+                const label = ENTITY_MAP[tag] || tag;
+                const word = tok.word || '';
+
+                if (tok.start != null && tok.end != null && tok.end > tok.start) {
+                    if (prefix === 'B' || !current || current.tag !== tag) {
+                        if (current) groups.push(current);
+                        current = { start: tok.start, end: tok.end, label, tag, words: [word] };
+                    } else {
+                        current.end = tok.end;
+                        current.words.push(word);
+                    }
+                } else {
+                    if (prefix === 'B' || !current || current.tag !== tag) {
+                        if (current) groups.push(current);
+                        current = { label, tag, words: [word], start: null, end: null };
+                    } else {
+                        current.words.push(word);
+                    }
+                }
+            }
+            if (current) groups.push(current);
+
+            const textLower = originalText.toLowerCase();
+            let searchFrom = 0;
+            const entities = [];
+
+            for (const g of groups) {
+                if (g.start != null && g.end != null) {
+                    entities.push({ start: g.start, end: g.end, label: g.label });
+                    searchFrom = g.end;
+                    continue;
+                }
+
+                let surface = '';
+                for (const w of g.words) {
+                    if (w.startsWith('##')) { surface += w.slice(2); }
+                    else if (surface) { surface += ' ' + w; }
+                    else { surface = w; }
+                }
+
+                const idx = textLower.indexOf(surface.toLowerCase(), searchFrom);
+                if (idx !== -1) {
+                    entities.push({ start: idx, end: idx + surface.length, label: g.label });
+                    searchFrom = idx + surface.length;
+                } else {
+                    const compact = g.words.map(w => w.startsWith('##') ? w.slice(2) : w).join('');
+                    const idx2 = textLower.indexOf(compact.toLowerCase(), Math.max(0, searchFrom - 5));
+                    if (idx2 !== -1) {
+                        let endIdx = idx2 + compact.length;
+                        while (endIdx < originalText.length && /\S/.test(originalText[endIdx]) && !/[\s,.\-;:!?()]/.test(originalText[endIdx])) endIdx++;
+                        entities.push({ start: idx2, end: endIdx, label: g.label });
+                        searchFrom = endIdx;
+                    }
+                }
+            }
+            return entities;
+        }
+
+        // --- Regex PII detection ---
+        function findRegex(text) {
+            const spans = [];
+            for (const { label, regex } of REGEX_PATTERNS) {
+                regex.lastIndex = 0;
+                let m;
+                while ((m = regex.exec(text)) !== null) {
+                    spans.push({ start: m.index, end: m.index + m[0].length, label });
+                }
+            }
+            return spans;
+        }
+
+        // --- Span merging ---
+        function pri(label) { const i = LABEL_PRIORITY.indexOf(label); return i === -1 ? 99 : i; }
+
+        function mergeSpans(spans) {
+            if (!spans.length) return [];
+            spans.sort((a, b) => a.start - b.start || pri(a.label) - pri(b.label));
+            const merged = [{ ...spans[0] }];
+            for (let i = 1; i < spans.length; i++) {
+                const curr = spans[i];
+                const prev = merged[merged.length - 1];
+                if (curr.start < prev.end) {
+                    const keep = pri(curr.label) < pri(prev.label) ? curr.label : prev.label;
+                    prev.end = Math.max(prev.end, curr.end);
+                    prev.start = Math.min(prev.start, curr.start);
+                    prev.label = keep;
+                } else {
+                    merged.push({ ...curr });
+                }
+            }
+            return merged;
+        }
+
+        // --- UI helpers ---
+        function escapeHTML(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+        function showInputPhase() {
+            inputPhase.style.display = '';
+            reviewPhase.style.display = 'none';
+            document.getElementById('mainLabel').textContent = 'Vstupni text';
+            document.getElementById('outputCard').style.display = 'none';
+        }
+
+        function showReviewPhase() {
+            inputPhase.style.display = 'none';
+            reviewPhase.style.display = '';
+            document.getElementById('mainLabel').textContent = 'Kontrola detekovanych udaju';
+        }
+
+        function renderReview() {
+            let html = '';
+            let lastEnd = 0;
+            const sorted = [...currentEntities].sort((a, b) => a.start - b.start);
+
+            for (const ent of sorted) {
+                if (ent.start > lastEnd) html += escapeHTML(currentText.slice(lastEnd, ent.start));
+                const opts = ALL_LABELS.map(l =>
+                    '<option value="'+l+'"'+(l===ent.label?' selected':'')+'>'+l+'</option>'
+                ).join('');
+                html += '<span class="entity-chip entity-'+ent.label+'">';
+                html += escapeHTML(ent.text);
+                html += '<select data-id="'+ent.id+'">'+opts+'</select>';
+                html += '<button class="remove-btn" data-id="'+ent.id+'" title="Odebrat">&times;</button>';
+                html += '</span>';
+                lastEnd = ent.end;
+            }
+            if (lastEnd < currentText.length) html += escapeHTML(currentText.slice(lastEnd));
+            document.getElementById('reviewArea').innerHTML = html;
+
+            const active = [...new Set(currentEntities.filter(e => e.label !== 'IGNOROVAT').map(e => e.label))];
+            document.getElementById('legend').innerHTML = active
+                .map(l => '<span class="legend-item entity-'+l+'">'+l+'</span>').join('');
+        }
+
+        // --- Event delegation for review chips ---
+        document.getElementById('reviewArea').addEventListener('change', (e) => {
+            if (e.target.tagName === 'SELECT') {
+                const id = +e.target.dataset.id;
+                const ent = currentEntities.find(x => x.id === id);
+                if (ent) { ent.label = e.target.value; renderReview(); }
+            }
+        });
+        document.getElementById('reviewArea').addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-btn')) {
+                const id = +e.target.dataset.id;
+                currentEntities = currentEntities.filter(x => x.id !== id);
+                renderReview();
+            }
+        });
+
+        // --- Main analyze ---
+        analyzeBtn.addEventListener('click', async () => {
+            const text = document.getElementById('input').value.trim();
+            if (!text || !ner) return;
+
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = 'Analyzuji...';
+
+            try {
+                const raw = await ner(text);
+                const nerSpans = aggregateTokens(raw, text);
+                const useRegex = document.getElementById('regexToggle').checked;
+                const regexSpans = useRegex ? findRegex(text) : [];
+                const allSpans = mergeSpans([...nerSpans, ...regexSpans]);
+
+                currentText = text;
+                currentEntities = allSpans.map((s, i) => ({
+                    id: i, start: s.start, end: s.end,
+                    label: s.label, text: text.slice(s.start, s.end), fake: '',
+                }));
+                assignFakeValues(currentEntities);
+
+                renderReview();
+                showReviewPhase();
+            } catch (err) {
+                console.error('Analysis error:', err);
+                setStatus('Chyba pri analyze: ' + err.message, 'error');
+            }
+
+            analyzeBtn.disabled = false;
+            analyzeBtn.textContent = 'Analyzovat';
+        });
+
+        // --- Back to edit ---
+        document.getElementById('backBtn').addEventListener('click', () => {
+            showInputPhase();
+        });
+
+        // --- Anonymize ---
+        document.getElementById('anonBtn').addEventListener('click', () => {
+            const mode = document.getElementById('replaceMode').value;
+            const ents = [...currentEntities]
+                .filter(e => e.label !== 'IGNOROVAT')
+                .sort((a, b) => b.start - a.start);
+            let result = currentText;
+            for (const ent of ents) {
+                const replacement = mode === 'fake' ? ent.fake : '[' + ent.label + ']';
+                result = result.slice(0, ent.start) + replacement + result.slice(ent.end);
+            }
+            document.getElementById('outputArea').textContent = result;
+            document.getElementById('outputCard').style.display = 'block';
+            document.getElementById('outputCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            navigator.clipboard.writeText(result).then(() => {
+                const t = document.getElementById('copiedToast');
+                t.classList.add('show');
+                setTimeout(() => t.classList.remove('show'), 2000);
+            }).catch(() => {});
+        });
+
+        // --- Copy again ---
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            navigator.clipboard.writeText(document.getElementById('outputArea').textContent).then(() => {
+                const t = document.getElementById('copiedToast');
+                t.classList.add('show');
+                setTimeout(() => t.classList.remove('show'), 2000);
+            }).catch(() => {});
+        });
+
+        // --- Clear ---
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            document.getElementById('input').value = '';
+            showInputPhase();
+            currentText = '';
+            currentEntities = [];
+        });
+
+        // --- Ctrl+Enter ---
+        document.getElementById('input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); analyzeBtn.click(); }
+        });
+
+        // --- Init ---
+        loadModel();
+    </script>
+</body>
+</html>
