@@ -392,13 +392,17 @@
             modelStatus.className = '';
 
             const fileProgress = {};
+            const loadStart = Date.now();
+            let showedDownload = false;
 
             function onProgress(ev) {
                 if (ev.status === 'download' || ev.status === 'progress') {
                     if (ev.file) fileProgress[ev.file] = { loaded: ev.loaded || 0, total: ev.total || 0 };
                     let totalBytes = 0, loadedBytes = 0;
                     for (const f of Object.values(fileProgress)) { totalBytes += f.total; loadedBytes += f.loaded; }
-                    if (totalBytes > 0) {
+                    // Only show download UI if it's taking > 2s (real download, not cache)
+                    if (totalBytes > 0 && (Date.now() - loadStart) > 2000) {
+                        showedDownload = true;
                         progressBar.classList.add('active');
                         progressLabel.classList.add('active');
                         const pct = Math.round((loadedBytes / totalBytes) * 100);
