@@ -1,0 +1,150 @@
+/* ============================================================
+   Shared Project Stylesheet — Tailwind CSS + Arial
+   ------------------------------------------------------------
+   Foundation: Tailwind CSS (https://tailwindcss.com/).
+
+   USAGE — drop this into the <head> of any project:
+
+     <script src="https://cdn.tailwindcss.com"></script>
+     <script>
+       tailwind.config = {
+         theme: {
+           extend: {
+             fontFamily: {
+               sans: ['Arial', 'Helvetica', 'sans-serif'],
+               mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+             },
+             colors: {
+               brand: {
+                 DEFAULT: '#2563eb',
+                 hover:   '#1d4ed8',
+                 subtle:  '#dbeafe',
+                 accent:  '#0ea5e9',
+               },
+             },
+             borderRadius: { DEFAULT: '8px' },
+             boxShadow: {
+               card: '0 1px 2px rgba(15,23,42,.04), 0 2px 8px rgba(15,23,42,.06)',
+             },
+           },
+         },
+       };
+     </script>
+     <link rel="stylesheet" href="stylesheet.css">
+
+   Then use Tailwind utility classes throughout, e.g.:
+     <button class="bg-brand hover:bg-brand-hover text-white px-4 py-2 rounded font-medium">
+       Primary
+     </button>
+
+   This file layers CSS variables + small utility classes for
+   anything that's awkward to express in pure Tailwind.
+   ============================================================ */
+
+/* ---------- Design tokens (CSS variables, for non-Tailwind CSS) ---------- */
+:root {
+  /* Palette — blue-forward, light mode */
+  --color-primary:        #2563eb;
+  --color-primary-hover:  #1d4ed8;
+  --color-primary-subtle: #dbeafe;
+  --color-accent:         #0ea5e9;
+
+  --color-text:       #0f172a;
+  --color-text-muted: #64748b;
+  --color-border:     #e2e8f0;
+
+  --color-bg:        #ffffff;
+  --color-bg-subtle: #f8fafc;
+
+  --color-success: #16a34a;
+  --color-warn:    #d97706;
+  --color-danger:  #dc2626;
+
+  /* Typography */
+  --font-sans: Arial, Helvetica, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius:    8px;
+  --radius-lg: 12px;
+
+  /* Shadow */
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+/* ---------- Base ---------- */
+html, body {
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.25;
+}
+
+code, pre, kbd, samp {
+  font-family: var(--font-mono);
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+/* ---------- Utility classes (complement Tailwind) ---------- */
+.muted { color: var(--color-text-muted); }
+
+.panel {
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-card);
+}
+
+.badge {
+  display: inline-block;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary-hover);
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+/* Inline code styling (outside <pre>) */
+:not(pre) > code {
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 1px 6px;
+  font-size: 0.9em;
+}
+
+pre {
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 16px;
+  overflow-x: auto;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.9em;
+}
