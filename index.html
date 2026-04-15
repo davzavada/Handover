@@ -77,22 +77,22 @@
 
         /* Entity chips — colors are semantic, keep per-label palette */
         .entity-chip {
-            display: inline-flex; align-items: center; gap: 0.15rem;
-            border-radius: 5px; font-weight: 600; font-size: 0.85rem;
-            padding: 0.1rem 0.15rem 0.1rem 0.45rem;
+            display: inline-flex; align-items: center; gap: 0.1rem;
+            border-radius: 4px; font-weight: 600; font-size: 0.75rem;
+            padding: 0.05rem 0.1rem 0.05rem 0.35rem;
             cursor: default; vertical-align: baseline; white-space: nowrap;
         }
         .entity-chip select {
-            border: none; background: transparent; font-size: 0.68rem; font-weight: 700;
-            cursor: pointer; padding: 0.1rem; color: inherit;
+            border: none; background: transparent; font-size: 0.6rem; font-weight: 700;
+            cursor: pointer; padding: 0.05rem; color: inherit;
             -webkit-appearance: none; appearance: none;
             border-left: 1px solid rgba(0,0,0,0.12);
-            margin-left: 0.25rem; padding-left: 0.25rem;
+            margin-left: 0.2rem; padding-left: 0.2rem;
         }
         .entity-chip select option { color: #333; background: white; }
         .entity-chip .remove-btn {
-            background: none; border: none; padding: 0.1rem 0.25rem;
-            font-size: 0.78rem; cursor: pointer; opacity: 0.4;
+            background: none; border: none; padding: 0.05rem 0.2rem;
+            font-size: 0.7rem; cursor: pointer; opacity: 0.4;
             color: inherit; line-height: 1; border-radius: 3px;
             transition: opacity 0.1s;
         }
@@ -105,6 +105,7 @@
         .entity-TELEFON     { background: #ddd6fe; color: #5b21b6; }
         .entity-EMAIL       { background: #fed7aa; color: #c2410c; }
         .entity-CASTKA      { background: #bef264; color: #3f6212; }
+        .entity-DOMENA      { background: #e0e7ff; color: #3730a3; }
         .entity-IGNOROVAT   { background: #f1f5f9; color: #94a3b8; text-decoration: line-through; }
 
         /* Legend item uses same entity-* classes */
@@ -168,6 +169,23 @@
             border-color: #93c5fd; color: var(--color-primary-hover);
         }
 
+        /* Category help popup */
+        .category-popup { padding: 0.6rem 0.75rem; min-width: 240px; }
+        .category-popup-title {
+            font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted);
+            text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.45rem;
+        }
+        .category-list { list-style: none; padding: 0; margin: 0; }
+        .category-list li {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.2rem 0; font-size: 0.8rem; color: var(--color-text);
+        }
+        .category-list .entity-chip {
+            font-size: 0.7rem; font-weight: 600; padding: 0.1rem 0.45rem;
+            border-radius: var(--radius-sm); flex-shrink: 0; min-width: 92px;
+            text-align: center; white-space: nowrap;
+        }
+
         .copied-toast {
             display: inline-flex; align-items: center; gap: 0.3rem;
             font-size: 0.8rem; color: var(--color-primary); font-weight: 600;
@@ -179,11 +197,7 @@
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
     <div class="w-full max-w-[820px]">
         <h1 class="text-3xl tracking-tight mb-1">Anonymizace textu</h1>
-        <p class="muted mb-4 text-sm leading-relaxed">
-            Rozpoznávání osobních údajů v českém textu. Detekuje jména, místa, organizace, telefony, e-maily a rodná čísla.
-        </p>
-
-        <div class="badge inline-flex items-center gap-1.5 mb-6" style="background:#dcfce7; color:#166534;">
+<div class="badge inline-flex items-center gap-1.5 mb-6" style="background:#dcfce7; color:#166534;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             100% v prohlížeči — vaše data neopouštějí toto zařízení
         </div>
@@ -192,10 +206,22 @@
         <div class="panel bg-white mb-4" id="mainCard">
             <div class="flex items-center gap-2 mb-2">
                 <label id="mainLabel" class="font-semibold text-sm" style="color: var(--color-primary-hover);">Vstupní text</label>
-                <button class="examples-trigger inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 text-xs font-semibold border-0 cursor-pointer" id="examplesTrigger" title="Ukázkové věty">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-                    <div class="examples-popup" id="examplesPopup">
-                        <div id="exampleList"></div>
+                <span id="tokenCount" class="text-xs text-slate-500 ml-auto"></span>
+                <button class="examples-trigger inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 text-xs font-semibold border-0 cursor-pointer" id="categoriesTrigger" title="Jaké kategorie se detekují" aria-label="Nápověda ke kategoriím">
+                    ?
+                    <div class="examples-popup category-popup" id="categoriesPopup">
+                        <div class="category-popup-title">Detekované kategorie</div>
+                        <ul class="category-list">
+                            <li><span class="entity-chip entity-OSOBA">OSOBA</span><span>jména osob</span></li>
+                            <li><span class="entity-chip entity-LOKALITA">LOKALITA</span><span>místa, adresy</span></li>
+                            <li><span class="entity-chip entity-ORGANIZACE">ORGANIZACE</span><span>firmy, instituce</span></li>
+                            <li><span class="entity-chip entity-OSTATNI">OSTATNI</span><span>ostatní entity</span></li>
+                            <li><span class="entity-chip entity-RODNE_CISLO">RODNE_CISLO</span><span>rodná čísla</span></li>
+                            <li><span class="entity-chip entity-TELEFON">TELEFON</span><span>telefonní čísla</span></li>
+                            <li><span class="entity-chip entity-EMAIL">EMAIL</span><span>e-mailové adresy</span></li>
+                            <li><span class="entity-chip entity-CASTKA">CASTKA</span><span>finanční částky</span></li>
+                            <li><span class="entity-chip entity-DOMENA">DOMENA</span><span>webové domény</span></li>
+                        </ul>
                     </div>
                 </button>
             </div>
@@ -282,13 +308,14 @@
         const MODEL_ID = 'model';
 
         const ENTITY_MAP = { 'PER': 'OSOBA', 'LOC': 'LOKALITA', 'ORG': 'ORGANIZACE', 'MISC': 'OSTATNI' };
-        const ALL_LABELS = ['OSOBA', 'LOKALITA', 'ORGANIZACE', 'OSTATNI', 'RODNE_CISLO', 'TELEFON', 'EMAIL', 'CASTKA', 'IGNOROVAT'];
-        const LABEL_PRIORITY = ['RODNE_CISLO', 'TELEFON', 'EMAIL', 'CASTKA', 'OSOBA', 'ORGANIZACE', 'LOKALITA', 'OSTATNI'];
+        const ALL_LABELS = ['OSOBA', 'LOKALITA', 'ORGANIZACE', 'OSTATNI', 'RODNE_CISLO', 'TELEFON', 'EMAIL', 'CASTKA', 'DOMENA', 'IGNOROVAT'];
+        const LABEL_PRIORITY = ['RODNE_CISLO', 'TELEFON', 'EMAIL', 'DOMENA', 'CASTKA', 'OSOBA', 'ORGANIZACE', 'LOKALITA', 'OSTATNI'];
 
         const REGEX_PATTERNS = [
             { label: 'RODNE_CISLO', regex: /\b\d{6}\/\d{3,4}\b/g },
             { label: 'TELEFON', regex: /(?<!\d)(?:\+420[\s-]?)?(?:\d{3}[\s-]?){2}\d{3}(?!\d)/g },
             { label: 'EMAIL', regex: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g },
+            { label: 'DOMENA', regex: /(?:https?:\/\/)?(?:www\.)?[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}(?:\/[^\s]*)?\b/g },
             { label: 'LOKALITA', regex: /(?:(?:v|na|do|z|ze|od|u|při|po|před|za|nad|pod|mezi|k|ke)\s+)?(?:[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+(?:ov[ěéa]|sk[ée]m?|ck[ée]m?|[ní])?)\s+(?:ulice?|ulici|ulic[ií]|třídě?|třídy|náměstí|nábřeží|sady|sadech|sad[ůy]|bulváru?|alej[ei]?|silnici|silnice|nám\.)(?:\s+\d+(?:\/\d+)?[a-zA-Z]?)?\b/gi },
             { label: 'LOKALITA', regex: /(?:ulice?|třída|náměstí|nábřeží)\s+[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+(?:\s+\d+(?:\/\d+)?[a-zA-Z]?)?\b/gi },
             { label: 'LOKALITA', regex: /\b\d{3}\s?\d{2}\b/g },
@@ -346,6 +373,13 @@
             const amounts = ['500 Kč','1 200 Kč','25 000 Kč','3 500 Kč','750 Kč','18 000 Kč','42 000 Kč','100 Kč','9 900 Kč','2 miliony Kč'];
             return amounts[Math.floor(Math.random() * amounts.length)];
         }
+        function randomDomain(idx) {
+            const names = ['example','company','web','site','domain','server','portal','system','service','network'];
+            const tlds = ['cz','com','eu','org','net','info','biz'];
+            const name = names[idx % names.length];
+            const tld = tlds[Math.floor(Math.random() * tlds.length)];
+            return name + '-' + Math.floor(Math.random() * 999) + '.' + tld;
+        }
 
         function assignFakeValues(entities) {
             const counters = {};
@@ -357,6 +391,7 @@
                 if (lbl === 'TELEFON') { ent.fake = randomPhone(); }
                 else if (lbl === 'RODNE_CISLO') { ent.fake = randomRC(); }
                 else if (lbl === 'EMAIL') { ent.fake = randomEmail(idx); }
+                else if (lbl === 'DOMENA') { ent.fake = randomDomain(idx); }
                 else if (lbl === 'CASTKA') { ent.fake = randomAmount(); }
                 else if (FAKE_POOLS[lbl]) { ent.fake = FAKE_POOLS[lbl][idx % FAKE_POOLS[lbl].length]; }
                 else { ent.fake = '[' + lbl + ']'; }
@@ -376,17 +411,7 @@
         const inputPhase = document.getElementById('inputPhase');
         const reviewPhase = document.getElementById('reviewPhase');
 
-        // --- Setup examples ---
-        const exList = document.getElementById('exampleList');
-        EXAMPLES.forEach((ex) => {
-            const btn = document.createElement('button');
-            btn.className = 'example-btn';
-            btn.textContent = ex;
-            btn.addEventListener('click', () => { document.getElementById('input').value = ex; });
-            exList.appendChild(btn);
-        });
-
-        // --- Model loading ---
+// --- Model loading ---
         function setError(msg) { statusEl.textContent = msg; statusEl.className = 'error'; }
 
         async function loadModel() {
